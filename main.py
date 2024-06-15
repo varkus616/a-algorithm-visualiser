@@ -5,7 +5,7 @@ import random
 
 pygame.init()
 
-SPRITE_SIZE = 32
+SPRITE_SIZE = 16
 screen_width = 800
 screen_height = 600
 screen = pygame.display.set_mode((screen_width, screen_height))
@@ -29,7 +29,7 @@ GRID_ROWS = screen_height // SPRITE_SIZE
 GRID_COLS = screen_width // SPRITE_SIZE
 squares = []
 
-grid = [[0] * GRID_COLS for _ in range(GRID_ROWS)]
+grid = [[1] * GRID_COLS for _ in range(GRID_ROWS)]
 
 grid[5][10] = 1
 grid[5][11] = 1
@@ -53,14 +53,15 @@ def draw_grid(grid):
 
 
 class Square:
-    def __init__(self, position):
+    def __init__(self, position, color=(0, 0, 255)):
         self.position = position
         self.path = []
         self.velocity = (0, 0)
         self.speed = 5
+        self.color = color
 
     def draw(self):
-        pygame.draw.rect(screen, blue, (*self.position, SPRITE_SIZE, SPRITE_SIZE))
+        pygame.draw.rect(screen, self.color, (*self.position, SPRITE_SIZE, SPRITE_SIZE))
 
     def draw_path(self):
         if self.path:
@@ -179,7 +180,11 @@ def randomize_squares(amount):
             row = random.randint(0, GRID_ROWS - 1)
 
         position = (col * SPRITE_SIZE, row * SPRITE_SIZE)
-        squares.append(Square(position))
+        r = random.randint(0, 255)
+        g = random.randint(0, 255)
+        b = random.randint(0, 255)
+        color = (r, g, b)
+        squares.append(Square(position, color))
 
 
 def place_block(mouse_grid_pos):
@@ -189,6 +194,35 @@ def place_block(mouse_grid_pos):
             grid[my][mx] = 1
         else:
             grid[my][mx] = 0
+
+
+def generate_maze(x, y, speed):
+    directions = [(0, 2), (2, 0), (0, -2), (-2, 0)]
+    random.shuffle(directions)
+
+    for dx, dy in directions:
+        nx, ny = x + dx, y + dy
+
+        if 0 <= nx < GRID_ROWS and 0 <= ny < GRID_COLS and grid[nx][ny] == 1:
+            grid[x + dx // 2][y + dy // 2] = 0
+            grid[nx][ny] = 0
+            render(grid)
+            pygame.time.wait(speed)
+            generate_maze(nx, ny, speed)
+
+
+def create_maze(speed=20):
+    squares.clear()
+    for x in range(GRID_ROWS):
+        for y in range(GRID_COLS):
+            grid[x][y] = 1
+    start_x, start_y = random.choice(range(0, GRID_ROWS, 2)), random.choice(range(0, GRID_COLS, 2))
+    grid[start_x][start_y] = 0
+    generate_maze(start_x, start_y, 100//speed)
+
+
+
+create_maze()
 
 
 while running:
@@ -221,6 +255,8 @@ while running:
                     diagonal_flag = True
             if event.key == pygame.K_r:
                 randomize = True
+            if event.key == pygame.K_w:
+                create_maze()
         if event.type == pygame.KEYUP:
             if event.key == pygame.K_r:
                 randomize = False
